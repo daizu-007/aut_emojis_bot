@@ -12,6 +12,19 @@ import MeCab
 
 #あとから変更するかもしれない変数
 size = 128 #画像のサイズ
+help_message = """
+### 通常の使い方
+`;｛テキスト｝;`という形式でメッセージを送信すると、そのメッセージを絵文字に変換して送信します。
+:oharagi:や:oyasuragi:のような絵文字に変換されます。
+入力された文字はローマ字としてひらがなに変換され、必要に応じて漢字に変換されます。
+### 絵文字を削除する
+このbotで送信した絵文字は送信者に偽造したwebhookで送信されているため、管理者権限を持っていないと本来の方法での削除はできません。
+絵文字を削除したい場合は、削除したい絵文字に`D`または`de`と送信してください。
+### コマンド一覧
+`/emoji ｛テキスト｝`: 任意の文字列を絵文字として送信できます。
+`/help`: このヘルプを表示します。
+"""
+
 
 #定数の設定
 this_dir = __file__[:-6] #このファイルのディレクトリ
@@ -105,9 +118,11 @@ async def on_ready():
 @bot.event
 async def on_message(message):
     if message.author.bot: #メッセージの送信者がbotなら
+        #print("botからのメッセージを受け取りました")
         return
+    
     text = message.content #メッセージの内容を取得
-    if text.startswith(";") and text.endswith(";"):
+    if text.startswith(";") and text.endswith(";"): #絵文字に変換する場合
         text = text[1:-1]
         #print(text)
         #await message.channel.send(file=discord.File(temp_file))
@@ -126,8 +141,25 @@ async def on_message(message):
             await message.delete()
         else:
             await message.reply("このチャンネルにはbotのwebhookがありません")
+
+    if text == "D" or text == "de": #絵文字を削除する場合
+        #print("テキストはDかdeです")
+        if message.reference: #メッセージへの返信なら
+            #print("メッセージへの返信です")
+            replied_message = await message.channel.fetch_message(message.reference.message_id) #返信先のメッセージを取得
+            webhooks = await message.channel.webhooks() #webhookの情報を取得
+            processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]
+            if processed_webhooks:
+                #print("botのwebhookがあります")
+                webhook = processed_webhooks[0] #botのwebhookの情報を取得
+                #print(replied_message.webhook_id)
+                #print(webhook.id)
+                if replied_message.webhook_id == webhook.id: #メッセージを送信したwebhookがbotのwebhookなら
+                    #print("メッセージを送信したwebhookがbotのwebhookです")
+                    await replied_message.delete()
+                    await message.delete()
     
-    await bot.process_commands(message) #コマンドを処理
+    #await bot.process_commands(message) #コマンドを処理する
 
 #直接絵文字を作成するコマンド
 @bot.slash_command(name="emoji", description="手動でテキストの絵文字を作成します。")
@@ -147,7 +179,12 @@ async def EMOJI(ctx, text: str):
     else:
         await ctx.respond("このチャンネルにはbotのwebhookがありません", ephemeral=True)
 
-
+#ヘルプコマンド
+@bot.slash_command(name="help", description="絵文字botのヘルプを表示します。")
+async def HELP(ctx):
+    #helpメッセージを作成
+    embed = discord.Embed(title="絵文字botの使い方", description=help_message, url="https://github.com/daizu-007/aut_emojis_bot")
+    await ctx.respond(embed=embed)
 
 #テキストを絵文字用に変換する関数
 def text_processer(text):
