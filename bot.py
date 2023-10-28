@@ -126,6 +126,28 @@ async def on_message(message):
             await message.delete()
         else:
             await message.reply("このチャンネルにはbotのwebhookがありません")
+    
+    await bot.process_commands(message) #コマンドを処理
+
+#直接絵文字を作成するコマンド
+@bot.slash_command(name="emoji", description="手動でテキストの絵文字を作成します。")
+async def EMOJI(ctx, text: str):
+    if type(ctx.channel) == discord.TextChannel:
+        webhooks = await ctx.channel.webhooks() #webhookの情報を取得
+        processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
+    else:
+        processed_webhooks = []
+    if processed_webhooks:
+        webhook = processed_webhooks[0]
+        #print("絵文字にするテキスト: " + text)
+        img = create_emoji(text) #絵文字を生成
+        img.save(temp_file)
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
+        await ctx.respond("絵文字を作成しました", ephemeral=True)
+    else:
+        await ctx.respond("このチャンネルにはbotのwebhookがありません", ephemeral=True)
+
+
 
 #テキストを絵文字用に変換する関数
 def text_processer(text):
