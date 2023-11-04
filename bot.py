@@ -126,58 +126,52 @@ async def on_message(message):
         text = text[1:-1]
         #print(text)
         #await message.channel.send(file=discord.File(temp_file))
-        if type(message.channel) == discord.TextChannel:
-            webhooks = await message.channel.webhooks() #webhookの情報を取得
-            processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
+        webhook = await check_webhook(message.channel)
+        if not webhook:
+            return
+        text = text_processer(text) #テキストを処理
+        #print("絵文字にするテキスト: " + text)
+        img = create_emoji(text) #絵文字を生成
+        img.save(temp_file)
+        if type(message.channel) == discord.Thread: #スレッドなら
+            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)
         else:
-            processed_webhooks = []
-        if processed_webhooks:
-            webhook = processed_webhooks[0] #botのwebhookの情報を取得
-            text = text_processer(text) #テキストを処理
-            #print("絵文字にするテキスト: " + text)
-            img = create_emoji(text) #絵文字を生成
-            img.save(temp_file)
             await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
-            await message.delete()
-        else:
-            await message.reply("このチャンネルにはbotのwebhookがありません")
-
+        await message.delete()
+    
     if text == "D" or text == "de": #絵文字を削除する場合
         #print("テキストはDかdeです")
         if message.reference: #メッセージへの返信なら
             #print("メッセージへの返信です")
             replied_message = await message.channel.fetch_message(message.reference.message_id) #返信先のメッセージを取得
-            webhooks = await message.channel.webhooks() #webhookの情報を取得
-            processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]
-            if processed_webhooks:
-                #print("botのwebhookがあります")
-                webhook = processed_webhooks[0] #botのwebhookの情報を取得
-                #print(replied_message.webhook_id)
-                #print(webhook.id)
-                if replied_message.webhook_id == webhook.id: #メッセージを送信したwebhookがbotのwebhookなら
-                    #print("メッセージを送信したwebhookがbotのwebhookです")
-                    await replied_message.delete()
-                    await message.delete()
+            webhook = await check_webhook(message.channel) #webhookの情報を取得
+            if not webhook:
+                return
+            #print(replied_message.webhook_id)
+            #print(webhook.id)
+            if replied_message.webhook_id == webhook.id: #メッセージを送信したwebhookがbotのwebhookなら
+                #print("メッセージを送信したwebhookがbotのwebhookです")
+                await replied_message.delete()
+                await message.delete()
     
     #await bot.process_commands(message) #コマンドを処理する
 
 #直接絵文字を作成するコマンド
 @bot.slash_command(name="emoji", description="手動でテキストの絵文字を作成します。")
 async def EMOJI(ctx, text: str):
-    if type(ctx.channel) == discord.TextChannel:
-        webhooks = await ctx.channel.webhooks() #webhookの情報を取得
-        processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
+    webhook = await check_webhook(ctx.channel)
+    if not webhook:
+        await ctx.respond("このチャンネルではカスタム絵文字を使用できません。", ephemeral=True)
+        return
+    #print("絵文字にするテキスト: " + text)
+    img = create_emoji(text) #絵文字を生成
+    img.save(temp_file)
+    if type(ctx.channel) == discord.Thread:
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
     else:
-        processed_webhooks = []
-    if processed_webhooks:
-        webhook = processed_webhooks[0]
-        #print("絵文字にするテキスト: " + text)
-        img = create_emoji(text) #絵文字を生成
-        img.save(temp_file)
         await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
-        await ctx.respond("絵文字を作成しました", ephemeral=True)
-    else:
-        await ctx.respond("このチャンネルにはbotのwebhookがありません", ephemeral=True)
+    await ctx.respond("絵文字を作成しました", ephemeral=True)
+
 
 #ヘルプコマンド
 @bot.slash_command(name="help", description="絵文字botのヘルプを表示します。")
@@ -287,6 +281,23 @@ def split_text(text):
             block += splited_text.pop(0)
         result.append(block)
     return result
+
+#webhookの存在確認及び作成関数
+async def check_webhook(channel):
+    if type(channel) == discord.TextChannel:
+        webhooks = await channel.webhooks() #webhookの情報を取得
+        processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
+        if processed_webhooks:
+            webhook = processed_webhooks[0] #botのwebhookの情報を取得
+        else:
+            webhook = await channel.create_webhook(name="bot") #botのwebhookを作成
+        return webhook
+    elif type(channel) == discord.Thread:
+        thread_parent = channel.parent
+        webhook = await check_webhook(thread_parent) #threadの親チャンネルのwebhookを取得
+        return webhook
+    else:
+        return None
 
 #実行時に実行される処理
 if __name__ == "__main__":
