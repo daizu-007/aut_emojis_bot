@@ -131,9 +131,13 @@ async def on_message(message):
             return
         text = text_processer(text) #テキストを処理
         #print("絵文字にするテキスト: " + text)
-        img = create_emoji(text) #絵文字を生成
+        #ランダムな色を生成
+        color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+        #print(type(color))
+        img = create_emoji(text, color) #絵文字を生成
         img.save(temp_file)
         if type(message.channel) == discord.Thread: #スレッドなら
+            #print("スレッドです")
             await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)
         else:
             await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
@@ -158,13 +162,25 @@ async def on_message(message):
 
 #直接絵文字を作成するコマンド
 @bot.slash_command(name="emoji", description="手動でテキストの絵文字を作成します。")
-async def EMOJI(ctx, text: str):
+async def EMOJI(ctx, text: str, r: int = None, g: int = None, b: int = None):
+    if r == None and g == None and b == None:
+        r = random.randint(0, 255)
+        g = random.randint(0, 255)
+        b = random.randint(0, 255)
+    elif r == None or g == None or b == None:
+        if r == None:
+            r = 0
+        if g == None:
+            g = 0
+        if b == None:
+            b = 0
     webhook = await check_webhook(ctx.channel)
     if not webhook:
         await ctx.respond("このチャンネルではカスタム絵文字を使用できません。", ephemeral=True)
         return
     #print("絵文字にするテキスト: " + text)
-    img = create_emoji(text) #絵文字を生成
+    color = (r, g, b)
+    img = create_emoji(text, color) #絵文字を生成
     img.save(temp_file)
     if type(ctx.channel) == discord.Thread:
         await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
@@ -194,9 +210,7 @@ def text_processer(text):
     return text
 
 #絵文字を生成する関数
-def create_emoji(text):
-    #ランダムな色を生成
-    color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
+def create_emoji(text, color):
     #透明な画像を作成
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     #描画オブジェクトを作成
@@ -284,7 +298,7 @@ def split_text(text):
 
 #webhookの存在確認及び作成関数
 async def check_webhook(channel):
-    if type(channel) == discord.TextChannel:
+    if type(channel) == discord.TextChannel or type(channel) == discord.ForumChannel:
         webhooks = await channel.webhooks() #webhookの情報を取得
         processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
         if processed_webhooks:
@@ -295,8 +309,9 @@ async def check_webhook(channel):
     elif type(channel) == discord.Thread:
         thread_parent = channel.parent
         webhook = await check_webhook(thread_parent) #threadの親チャンネルのwebhookを取得
-        return webhook
+        return webhook       
     else:
+        print(f"{type(channel)}ではwebhookを使用できません。")
         return None
 
 #実行時に実行される処理
