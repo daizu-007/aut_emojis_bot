@@ -37,7 +37,9 @@ romaji_to_japanese_map = {} #ローマ字ひらがな変換マップの定義
 with open(path.join(path.dirname(__file__), "config.json"), "r") as f:
     config = json.load(f)
 token = config["token"]
-font_path = config["font_path"]
+
+#フォントのパスを取得
+font_path = path.join(path.dirname(__file__), "NotoSansJP-Bold.ttf")
 
 #ローマ字ひらがな変換表を読み込む
 def setup_romaji_map_from_resource_name(resource_name):
@@ -126,7 +128,14 @@ async def on_message(message):
         text = text[1:-1]
         #print(text)
         #await message.channel.send(file=discord.File(temp_file))
-        webhook = await check_webhook(message.channel)
+        try:
+
+            webhook = await check_webhook(message.channel)
+
+        except Exception as e:
+            print("webhookの確認に失敗しました")
+            print(e)
+            return
         if not webhook:
             return
         text = text_processer(text) #テキストを処理
@@ -136,27 +145,55 @@ async def on_message(message):
         #print(type(color))
         img = create_emoji(text, color) #絵文字を生成
         img.save(temp_file)
-        if type(message.channel) == discord.Thread: #スレッドなら
-            #print("スレッドです")
-            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)
-        else:
-            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
-        await message.delete()
+        try:
+
+            if type(message.channel) == discord.Thread: #スレッドなら
+                #print("スレッドです")    
+                await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)   
+            else:
+                await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
+
+        except Exception as e:
+            print("メッセージの送信に失敗しました")
+            print(e)
+            return
+        try:
+
+            await message.delete()
+
+        except Exception as e:
+            print("メッセージの削除に失敗しました")
+            print(e)
+            return
     
     if text == "D" or text == "de": #絵文字を削除する場合
         #print("テキストはDかdeです")
         if message.reference: #メッセージへの返信なら
             #print("メッセージへの返信です")
             replied_message = await message.channel.fetch_message(message.reference.message_id) #返信先のメッセージを取得
-            webhook = await check_webhook(message.channel) #webhookの情報を取得
+            try:
+
+                webhook = await check_webhook(message.channel) #webhookの情報を取得
+
+            except Exception as e:
+                print("webhookの確認に失敗しました")
+                print(e)
+                return
             if not webhook:
                 return
             #print(replied_message.webhook_id)
             #print(webhook.id)
             if replied_message.webhook_id == webhook.id: #メッセージを送信したwebhookがbotのwebhookなら
                 #print("メッセージを送信したwebhookがbotのwebhookです")
-                await replied_message.delete()
-                await message.delete()
+                try:
+
+                    await replied_message.delete()
+                    await message.delete()
+                
+                except Exception as e:
+                    print("メッセージの削除に失敗しました")
+                    print(e)
+                    return
     
     #await bot.process_commands(message) #コマンドを処理する
 
@@ -174,27 +211,61 @@ async def EMOJI(ctx, text: str, r: int = None, g: int = None, b: int = None):
             g = 0
         if b == None:
             b = 0
-    webhook = await check_webhook(ctx.channel)
+    try:
+
+        webhook = await check_webhook(ctx.channel)
+
+    except Exception as e:
+        print("webhookの確認に失敗しました")
+        print(e)
+        return
     if not webhook:
-        await ctx.respond("このチャンネルではカスタム絵文字を使用できません。", ephemeral=True)
+        try:
+
+            await ctx.respond("このチャンネルではカスタム絵文字を使用できません。", ephemeral=True)
+
+        except Exception as e:
+            print("メッセージの送信に失敗しました")
+            print(e)
         return
     #print("絵文字にするテキスト: " + text)
     color = (r, g, b)
     img = create_emoji(text, color) #絵文字を生成
     img.save(temp_file)
-    if type(ctx.channel) == discord.Thread:
-        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
-    else:
-        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
-    await ctx.respond("絵文字を作成しました", ephemeral=True)
+    try:
+
+        if type(ctx.channel) == discord.Thread:
+            await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
+        else:
+            await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
+        await ctx.respond("絵文字を作成しました", ephemeral=True)
+
+    except Exception as e:
+        print("メッセージの送信に失敗しました")
+        print(e)
+        return
 
 
 #ヘルプコマンド
 @bot.slash_command(name="help", description="絵文字botのヘルプを表示します。")
 async def HELP(ctx):
-    #helpメッセージを作成
-    embed = discord.Embed(title="絵文字botの使い方", description=help_message, url="https://github.com/daizu-007/aut_emojis_bot")
-    await ctx.respond(embed=embed)
+    try:
+
+        #helpメッセージを作成
+        embed = discord.Embed(title="絵文字botの使い方", description=help_message, url="https://github.com/daizu-007/aut_emojis_bot")
+    
+    except Exception as e:
+        print("メッセージの作成に失敗しました")
+        print(e)
+        return
+    try:
+
+        await ctx.respond(embed=embed)
+
+    except Exception as e:
+        print("メッセージの送信に失敗しました")
+        print(e)
+        return
 
 #テキストを絵文字用に変換する関数
 def text_processer(text):
@@ -298,26 +369,40 @@ def split_text(text):
 
 #webhookの存在確認及び作成関数
 async def check_webhook(channel):
-    if type(channel) == discord.TextChannel or type(channel) == discord.ForumChannel:
-        webhooks = await channel.webhooks() #webhookの情報を取得
-        processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
-        if processed_webhooks:
-            webhook = processed_webhooks[0] #botのwebhookの情報を取得
+    try:
+
+        if type(channel) == discord.TextChannel or type(channel) == discord.ForumChannel:
+            webhooks = await channel.webhooks() #webhookの情報を取得
+            processed_webhooks = [obj for obj in webhooks if obj.name == "bot"]#webhookの情報からbotのwebhookの情報を取得
+            if processed_webhooks:
+                webhook = processed_webhooks[0] #botのwebhookの情報を取得
+            else:
+                webhook = await channel.create_webhook(name="bot") #botのwebhookを作成
+            return webhook
+        elif type(channel) == discord.Thread:
+            thread_parent = channel.parent
+            webhook = await check_webhook(thread_parent) #threadの親チャンネルのwebhookを取得
+            return webhook       
         else:
-            webhook = await channel.create_webhook(name="bot") #botのwebhookを作成
-        return webhook
-    elif type(channel) == discord.Thread:
-        thread_parent = channel.parent
-        webhook = await check_webhook(thread_parent) #threadの親チャンネルのwebhookを取得
-        return webhook       
-    else:
-        print(f"{type(channel)}ではwebhookを使用できません。")
+            print(f"{type(channel)}ではwebhookを使用できません。")
+            return None
+        
+    except Exception as e:
+        print("webhookの確認に失敗しました")
+        print(e)
         return None
 
 #実行時に実行される処理
 if __name__ == "__main__":
     print("botを実行します")
-    bot.run(token) #botを実行
+    try:
+
+        bot.run(token) #botを実行
+
+    except Exception as e:
+        print("botの実行に失敗しました")
+        print(e)
+        
 
 #テスト
 #img = create_emoji("おはらぎ")

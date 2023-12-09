@@ -1,0 +1,5 @@
+py-cord==2.4.1
+Pillow==10.0.0
+mecab-python3==1.0.8
+unidic-lite==1.0.8
+requests==2.31.0
