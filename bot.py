@@ -4,6 +4,7 @@ import discord
 from PIL import Image, ImageDraw, ImageFont
 import json
 from os import path
+from os import environ
 import random
 import math
 import csv
@@ -33,10 +34,9 @@ intents = discord.Intents.all() #botにすべての権限を与える
 bot = discord.Bot(intents=intents, command_prefix="/")
 romaji_to_japanese_map = {} #ローマ字ひらがな変換マップの定義
 
-#config.jsonから設定を読み込む
-with open(path.join(path.dirname(__file__), "config.json"), "r") as f:
-    config = json.load(f)
-token = config["token"]
+#環境変数からトークンを取得
+token = environ['AUT_EMOJIS_BOT_TOKEN']
+
 
 #フォントのパスを取得
 font_path = path.join(path.dirname(__file__), "NotoSansJP-Bold.ttf")
