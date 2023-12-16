@@ -43,4 +43,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-```
+```  
+
+また、形態素分析には[gooラボのAPI](https://labs.goo.ne.jp/api/jp/morphological-analysis/)を使用しています。以下はgooラボの利用規約に基づくクレジット表示です。
+![supported by goo](http://u.xgoo.jp/img/sgoo.png)
