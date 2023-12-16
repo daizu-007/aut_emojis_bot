@@ -43,4 +43,10 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-```
+```  
+  
+このbotでは、絵文字の生成に[絵文字ジェネレーター](https://emoji-gen.ninja/result?text=%E7%B5%B5%E6%96%87%0A%E5%AD%97%E3%80%82&color=EC71A1FF&back_color=00000000&font=notosans-mono-bold&size_fixed=false&align=center&stretch=true&public_fg=true&locale=ja)のURLを使用しています。素晴らしいサービスを提供してくださっている[emoji-gen氏](https://github.com/emoji-gen)に心から感謝します。
+
+また、形態素分析には[gooラボのAPI](https://labs.goo.ne.jp/api/jp/morphological-analysis/)を使用しています。素晴らしいAPIを提供してくださっているgooラボに感謝します。以下はgooラボの利用規約に基づくクレジット表示です。
+![supported by goo](http://u.xgoo.jp/img/sgoo.png)
+

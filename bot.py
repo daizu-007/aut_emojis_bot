@@ -10,6 +10,7 @@ import csv
 import requests
 #import MeCab
 from goolabs import GoolabsAPI
+import io
 
 #あとから変更するかもしれない変数
 size = 128 #画像のサイズ
@@ -132,7 +133,7 @@ async def on_message(message):
     if text.startswith(";") and text.endswith(";"): #絵文字に変換する場合
         text = text[1:-1]
         #print(text)
-        #await message.channel.send(file=discord.File(temp_file))
+        #await message.channel.send(file=discord.File(fp=io.BytesIO(requests.get(img).content), filename='image.png'))
         webhook = await check_webhook(message.channel)
         if not webhook:
             return
@@ -142,12 +143,11 @@ async def on_message(message):
         color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
         #print(type(color))
         img = create_emoji(text, color) #絵文字を生成
-        img.save(temp_file)
         if type(message.channel) == discord.Thread: #スレッドなら
         #print("スレッドです")    
-            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)   
+            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(fp=io.BytesIO(requests.get(img).content), filename='image.png'), thread=message.channel)   
         else:
-            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
+            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(fp=io.BytesIO(requests.get(img).content), filename='image.png'))
         await message.delete()
     
     if text == "D" or text == "de": #絵文字を削除する場合
@@ -187,12 +187,11 @@ async def EMOJI(ctx, text: str, r: int = None, g: int = None, b: int = None):
     #print("絵文字にするテキスト: " + text)
     color = (r, g, b)
     img = create_emoji(text, color) #絵文字を生成
-    img.save(temp_file)
     if type(ctx.channel) == discord.Thread:
-        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(fp=io.BytesIO(requests.get(img).content), filename='image.png'), thread=ctx.channel)
     else:
-        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
-        await ctx.respond("絵文字を作成しました", ephemeral=True)
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(fp=io.BytesIO(requests.get(img).content), filename='image.png'))
+    await ctx.respond("絵文字を作成しました", ephemeral=True)
 
 
 #ヘルプコマンド
@@ -217,71 +216,11 @@ def text_processer(text):
 
 #絵文字を生成する関数
 def create_emoji(text, color):
-    #透明な画像を作成
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    #描画オブジェクトを作成
-    #draw = ImageDraw.Draw(img)
-    #字数等を計算
-    lenge = len(text) #テキストの長さ
-    lenge_sqrt = math.sqrt(lenge) #テキストの長さの平方根
-    horizontal_lenge = math.ceil(lenge_sqrt) #横の文字数
-    vertical_lenge = math.ceil(lenge / horizontal_lenge) #縦の文字数
-    char_width = size / horizontal_lenge #一文字の横幅
-    char_height = size / vertical_lenge #一文字の縦幅
-    #print("horizontal_lenge=" + str(horizontal_lenge))
-    #print("vertical_lenge=" + str(vertical_lenge))
-    #print("--------------------------------------------------")
-    #一文字ずつ処理する
-    for i in range(lenge):
-        char = text[i]
-        number = i + 1
-        #画像にする
-        char_img = text_to_image(char, color)
-        #画像をリサイズする
-        char_img = char_img.resize((int(char_width), int(char_height)))
-        #画像を貼り付ける位置を計算する
-        if number % horizontal_lenge == 0: #一番右側なら
-            x = ((horizontal_lenge - 1) * char_width)# + (char_width / 2)
-            y = (((number // horizontal_lenge) - 1) * char_height)# + (char_height / 2)
-            #print("it's right edge")
-        else:
-            x = (((number % horizontal_lenge) - 1) * char_width)# + (char_width / 2)
-            y = ((number // horizontal_lenge) * char_height)# + (char_height / 2)
-            #print("it's not right edge")
-        #画像を貼り付ける
-        img.paste(char_img, (int(x), int(y)))
-        
-        #デバッグ用
-        """
-        print("number=" + str(number))
-        print("text=" + char)
-        print("char_width=" + str(char_width))
-        print("char_height=" + str(char_height))
-        print("x=" + str(x))
-        print("y=" + str(y))
-        print("--------------------------------------------------")
-        """
-    #画像を返す
-    return img
-
-#渡された文字を正方形の画像にする関数
-def text_to_image(char,color=(0,0,0,255)):
-    #透明な画像を作成
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    #描画オブジェクトを作成
-    draw = ImageDraw.Draw(img)
-    #フォントの大きさを調節
-    font_size = 1
-    font = ImageFont.truetype(font_path, font_size)
-    size_of_font = font.getbbox(char)
-    while max(size_of_font[2],size_of_font[3]) < size:
-        font_size += 1
-        font = ImageFont.truetype(font_path, font_size)
-        size_of_font = font.getbbox(char)
-    font = ImageFont.truetype(font_path, font_size + 20)
-    #画像に文字を描画する
-    draw.text((size//2, size//2), char, font=font, fill=color, anchor="mm")
-    #画像を返す
+    #RGBを16進数に変換
+    rgba = '{:02x}{:02x}{:02x}{:02x}'.format(color[0], color[1], color[2], 255)
+    #画像をのURLを生成
+    img = f"https://emoji-gen.ninja/emoji?align=center&back_color=00000000&color={rgba}&font=notosans-mono-bold&locale=ja&public_fg=true&size_fixed=false&stretch=true&text={text}"
+    #画像のURLを返す
     return img
 
 #テキストを形態素解析して分割する関数
