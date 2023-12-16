@@ -8,7 +8,8 @@ import random
 import math
 import csv
 import requests
-import MeCab
+#import MeCab
+from goolabs import GoolabsAPI
 
 #あとから変更するかもしれない変数
 size = 128 #画像のサイズ
@@ -37,6 +38,10 @@ romaji_to_japanese_map = {} #ローマ字ひらがな変換マップの定義
 with open(path.join(path.dirname(__file__), "config.json"), "r") as f:
     config = json.load(f)
 token = config["token"]
+app_id = config["app_id"]
+
+#形態素解析APIの設定
+gooAPI = GoolabsAPI(app_id)
 
 #フォントのパスを取得
 font_path = path.join(path.dirname(__file__), "NotoSansJP-Bold.ttf")
@@ -128,14 +133,7 @@ async def on_message(message):
         text = text[1:-1]
         #print(text)
         #await message.channel.send(file=discord.File(temp_file))
-        try:
-
-            webhook = await check_webhook(message.channel)
-
-        except Exception as e:
-            print("webhookの確認に失敗しました")
-            print(e)
-            return
+        webhook = await check_webhook(message.channel)
         if not webhook:
             return
         text = text_processer(text) #テキストを処理
@@ -145,55 +143,27 @@ async def on_message(message):
         #print(type(color))
         img = create_emoji(text, color) #絵文字を生成
         img.save(temp_file)
-        try:
-
-            if type(message.channel) == discord.Thread: #スレッドなら
-                #print("スレッドです")    
-                await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)   
-            else:
-                await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
-
-        except Exception as e:
-            print("メッセージの送信に失敗しました")
-            print(e)
-            return
-        try:
-
-            await message.delete()
-
-        except Exception as e:
-            print("メッセージの削除に失敗しました")
-            print(e)
-            return
+        if type(message.channel) == discord.Thread: #スレッドなら
+        #print("スレッドです")    
+            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file), thread=message.channel)   
+        else:
+            await webhook.send(username=message.author.display_name, avatar_url=message.author.display_avatar, file=discord.File(temp_file))
+        await message.delete()
     
     if text == "D" or text == "de": #絵文字を削除する場合
         #print("テキストはDかdeです")
         if message.reference: #メッセージへの返信なら
             #print("メッセージへの返信です")
             replied_message = await message.channel.fetch_message(message.reference.message_id) #返信先のメッセージを取得
-            try:
-
-                webhook = await check_webhook(message.channel) #webhookの情報を取得
-
-            except Exception as e:
-                print("webhookの確認に失敗しました")
-                print(e)
-                return
+            webhook = await check_webhook(message.channel) #webhookの情報を取得
             if not webhook:
                 return
             #print(replied_message.webhook_id)
             #print(webhook.id)
             if replied_message.webhook_id == webhook.id: #メッセージを送信したwebhookがbotのwebhookなら
                 #print("メッセージを送信したwebhookがbotのwebhookです")
-                try:
-
-                    await replied_message.delete()
-                    await message.delete()
-                
-                except Exception as e:
-                    print("メッセージの削除に失敗しました")
-                    print(e)
-                    return
+                await replied_message.delete()
+                await message.delete()
     
     #await bot.process_commands(message) #コマンドを処理する
 
@@ -211,61 +181,26 @@ async def EMOJI(ctx, text: str, r: int = None, g: int = None, b: int = None):
             g = 0
         if b == None:
             b = 0
-    try:
-
-        webhook = await check_webhook(ctx.channel)
-
-    except Exception as e:
-        print("webhookの確認に失敗しました")
-        print(e)
-        return
+    webhook = await check_webhook(ctx.channel)
     if not webhook:
-        try:
-
             await ctx.respond("このチャンネルではカスタム絵文字を使用できません。", ephemeral=True)
-
-        except Exception as e:
-            print("メッセージの送信に失敗しました")
-            print(e)
-        return
     #print("絵文字にするテキスト: " + text)
     color = (r, g, b)
     img = create_emoji(text, color) #絵文字を生成
     img.save(temp_file)
-    try:
-
-        if type(ctx.channel) == discord.Thread:
-            await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
-        else:
-            await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
+    if type(ctx.channel) == discord.Thread:
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file), thread=ctx.channel)
+    else:
+        await webhook.send(username=ctx.author.display_name, avatar_url=ctx.author.display_avatar, file=discord.File(temp_file))
         await ctx.respond("絵文字を作成しました", ephemeral=True)
-
-    except Exception as e:
-        print("メッセージの送信に失敗しました")
-        print(e)
-        return
 
 
 #ヘルプコマンド
 @bot.slash_command(name="help", description="絵文字botのヘルプを表示します。")
 async def HELP(ctx):
-    try:
-
-        #helpメッセージを作成
-        embed = discord.Embed(title="絵文字botの使い方", description=help_message, url="https://github.com/daizu-007/aut_emojis_bot")
-    
-    except Exception as e:
-        print("メッセージの作成に失敗しました")
-        print(e)
-        return
-    try:
-
-        await ctx.respond(embed=embed)
-
-    except Exception as e:
-        print("メッセージの送信に失敗しました")
-        print(e)
-        return
+    #helpメッセージを作成
+    embed = discord.Embed(title="絵文字botの使い方", description=help_message, url="https://github.com/daizu-007/aut_emojis_bot")
+    await ctx.respond(embed=embed)
 
 #テキストを絵文字用に変換する関数
 def text_processer(text):
@@ -352,18 +287,17 @@ def text_to_image(char,color=(0,0,0,255)):
 #テキストを形態素解析して分割する関数
 def split_text(text):
     count_limit = 54
-    tagger = MeCab.Tagger("-Owakati") #Mecabで分かち書きできるようにする
-    splited_text = tagger.parse(text).split() #分かち書きする
+    splited_text = gooAPI.morph(sentence=text, info_filter="form")["word_list"][0] #形態素解析
     result = []
     while splited_text: #splited_textが空になるまで続ける
         block = ""
         if len(block)+len(splited_text[0]) < count_limit:
             while len(block)+len(splited_text[0]) < count_limit: #blockにsplited_textの最初の単語を追加してもcount_limitを超えない間続ける
-                block += splited_text.pop(0) #splited_textの最初の単語をblockに追加して削除
+                block += splited_text.pop(0)[0] #splited_textの最初の単語をblockに追加して削除
                 if not splited_text: #splited_textが空になったらwhileを抜ける
                     break
         else:
-            block += splited_text.pop(0)
+            block += splited_text.pop(0)[0]
         result.append(block)
     return result
 
